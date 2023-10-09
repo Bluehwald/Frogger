@@ -1,0 +1,133 @@
+[gd_scene load_steps=12 format=3 uid="uid://j32perqlaaws"]
+
+[ext_resource type="Texture2D" uid="uid://betlutrc7j35" path="res://art/frog/down_idle.png" id="1_x8n60"]
+[ext_resource type="Texture2D" uid="uid://t7itu4cl8xb7" path="res://art/frog/down_jump.png" id="2_twgww"]
+[ext_resource type="Texture2D" uid="uid://ck2jlxlyvf25h" path="res://art/frog/left_idle.png" id="3_cldvy"]
+[ext_resource type="Texture2D" uid="uid://by1an0p5wl3i8" path="res://art/frog/left_jump.png" id="4_7t26l"]
+[ext_resource type="Texture2D" uid="uid://dqwgox5x0dw6w" path="res://art/frog/right_idle.png" id="5_m8h56"]
+[ext_resource type="Texture2D" uid="uid://bjurlqkl0hspl" path="res://art/frog/right_jump.png" id="6_s68nk"]
+[ext_resource type="Texture2D" uid="uid://ch58p3kna3n8q" path="res://art/frog/up_idle.png" id="7_mx67y"]
+[ext_resource type="Texture2D" uid="uid://cajeajmoq5qu8" path="res://art/frog/up_jump.png" id="8_sn8f7"]
+
+[sub_resource type="GDScript" id="GDScript_10l7q"]
+script/source = "extends CharacterBody2D
+
+
+const SPEED = 300.0
+
+var sprites
+
+func _ready():
+	sprites = $AnimatedSprite2D
+
+
+func _physics_process(delta):
+	
+	if Input.is_action_just_pressed(\"left\"):
+		position.x -= 32
+		sprites.play(\"left_jump\")
+	if Input.is_action_just_pressed(\"right\"):
+		position.x += 32
+		sprites.play(\"right_jump\")
+	if Input.is_action_just_pressed(\"up\"):
+		position.y -= 32
+		sprites.play(\"up_jump\")
+	if Input.is_action_just_pressed(\"down\"):
+		position.y += 32
+		sprites.play(\"down_jump\")
+
+	move_and_slide()
+"
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_wbsch"]
+size = Vector2(32, 32)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_n5g8e"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("1_x8n60")
+}],
+"loop": true,
+"name": &"down_idle",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("2_twgww")
+}, {
+"duration": 1.0,
+"texture": ExtResource("1_x8n60")
+}],
+"loop": false,
+"name": &"down_jump",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("3_cldvy")
+}],
+"loop": true,
+"name": &"left_idle",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("4_7t26l")
+}, {
+"duration": 1.0,
+"texture": ExtResource("3_cldvy")
+}],
+"loop": false,
+"name": &"left_jump",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("5_m8h56")
+}],
+"loop": true,
+"name": &"right_idle",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("6_s68nk")
+}, {
+"duration": 1.0,
+"texture": ExtResource("5_m8h56")
+}],
+"loop": false,
+"name": &"right_jump",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("7_mx67y")
+}],
+"loop": true,
+"name": &"up_idle",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("8_sn8f7")
+}, {
+"duration": 1.0,
+"texture": ExtResource("7_mx67y")
+}],
+"loop": false,
+"name": &"up_jump",
+"speed": 5.0
+}]
+
+[node name="Frog" type="CharacterBody2D"]
+script = SubResource("GDScript_10l7q")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_wbsch")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+texture_filter = 1
+sprite_frames = SubResource("SpriteFrames_n5g8e")
+animation = &"up_jump"
