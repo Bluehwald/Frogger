@@ -1,0 +1,13 @@
+[gd_scene load_steps=2 format=3 uid="uid://d207u0lh0i81m"]
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_f766f"]
+
+[node name="Floatables" type="AnimatedSprite2D"]
+z_index = 100
+sprite_frames = SubResource("SpriteFrames_f766f")
+
+[node name="Area2D" type="Area2D" parent="."]
+z_index = 101
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D"]
+z_index = 102

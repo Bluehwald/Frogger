@@ -22,12 +22,14 @@ var target_position : Vector2
 var sprites : AnimatedSprite2D
 
 var on_floating_thing : bool
+var on_water : bool
 
 func _ready():
 	sprites = $AnimatedSprite2D
 	target_position = position
 	set_sprite_to_sitting_animation()
 	on_floating_thing = false
+	on_water = false
 
 func _physics_process(delta):
 	
@@ -85,17 +87,15 @@ func set_sprite_to_sitting_animation():
 	sprites.play()
 
 func _on_area_2d_water_body_entered(body):
-	if !on_floating_thing:
-		death()
+	on_water = true
 
+func _on_area_2d_water_body_exited(body):
+	on_water = false
 
 func _on_area_2d_lillypad_body_entered(body):
-	print(\"1\")
 	on_floating_thing = true
 
-
 func _on_area_2d_lillypad_body_exited(body):
-	print(\"3\")
 	on_floating_thing = false
 "
 

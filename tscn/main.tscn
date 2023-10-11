@@ -1,13 +1,35 @@
-[gd_scene load_steps=7 format=3 uid="uid://1edh2rs6gc4v"]
+[gd_scene load_steps=8 format=3 uid="uid://1edh2rs6gc4v"]
 
 [ext_resource type="PackedScene" uid="uid://j32perqlaaws" path="res://tscn/frog.tscn" id="1_oip3v"]
 [ext_resource type="Texture2D" uid="uid://cp5jilmte88xo" path="res://art/tileset/tileset.png" id="2_xnago"]
+[ext_resource type="PackedScene" uid="uid://d207u0lh0i81m" path="res://tscn/floatables.tscn" id="3_q2diy"]
+
+[sub_resource type="GDScript" id="GDScript_sxywy"]
+script/source = "extends Node2D
+
+
+# Called when the node enters the scene tree for the first time.
+func _ready():
+	var collision_shape = $Floatables_Lillypad_01.get_node(\"Area2D/CollisionShape2D\")
+	var shape = RectangleShape2D.new()
+	shape.set_size(Vector2(32, 32))
+	
+	collision_shape.shape = shape
+	
+#	add_frame(anim: StringName, texture: Texture2D, duration: float = 1.0, at_position: int = -1)
+	var image = Image.load_from_file(\"res://art/floatables/lillypad01.png\")
+	var texture = ImageTexture.create_from_image(image)
+	$Floatables_Lillypad_01.sprite_frames.add_frame(\"default\", texture, 1.0)
+	$Floatables_Lillypad_01.play(\"default\")
+	$Floatables_Lillypad_01.position = Vector2(368, 240)
+
+# Called every frame. 'delta' is the elapsed time since the previous frame.
+func _process(delta):
+	pass
+"
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_4sdko"]
 size = Vector2(864, 255)
-
-[sub_resource type="RectangleShape2D" id="RectangleShape2D_3k8c3"]
-size = Vector2(102, 54)
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_myyq3"]
 texture = ExtResource("2_xnago")
@@ -141,24 +163,13 @@ physics_layer_1/collision_mask = 2
 sources/0 = SubResource("TileSetAtlasSource_myyq3")
 
 [node name="Main" type="Node2D"]
+script = SubResource("GDScript_sxywy")
 
 [node name="Area2D_water" type="Area2D" parent="."]
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D_water"]
 position = Vector2(432, 127.5)
 shape = SubResource("RectangleShape2D_4sdko")
-
-[node name="Area2D_lillypad" type="Area2D" parent="."]
-z_index = 45
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D_lillypad"]
-z_index = 90
-position = Vector2(370, 229)
-shape = SubResource("RectangleShape2D_3k8c3")
-
-[node name="Sprite2D" type="Sprite2D" parent="Area2D_lillypad"]
-position = Vector2(366, 176)
-texture = ExtResource("2_xnago")
 
 [node name="TileMap" type="TileMap" parent="."]
 texture_filter = 1
@@ -201,6 +212,7 @@ z_index = 999
 position = Vector2(400, 464)
 up_direction = Vector2(0.999997, -0.00243308)
 
+[node name="Floatables_Lillypad_01" parent="." instance=ExtResource("3_q2diy")]
+
 [connection signal="body_entered" from="Area2D_water" to="Frog" method="_on_area_2d_water_body_entered"]
-[connection signal="body_entered" from="Area2D_lillypad" to="Frog" method="_on_area_2d_lillypad_body_entered"]
-[connection signal="body_exited" from="Area2D_lillypad" to="Frog" method="_on_area_2d_lillypad_body_exited"]
+[connection signal="body_exited" from="Area2D_water" to="Frog" method="_on_area_2d_water_body_exited"]
