@@ -7,25 +7,264 @@
 [sub_resource type="GDScript" id="GDScript_sxywy"]
 script/source = "extends Node2D
 
+const SPEED = 50.0
+const TILE_SIZE = 32.0
+const DIMENSIONS = Vector2(854, 480)
+
+const ROW_1_WATER = 240
+const ROW_2_WATER = ROW_1_WATER - 32
+const ROW_3_WATER = ROW_2_WATER - 32
+const ROW_4_WATER = ROW_3_WATER - 32
+const ROW_5_WATER = ROW_4_WATER - 32
+
+@export var floatable_scene : PackedScene
+@export var frog_scene : PackedScene
+
+var on_floatables : Array
+var dict_interchangeable : Dictionary # stores a false for the object for a simple state machine, i.e. sink / swim up for turtles
+var dict_movement_direction : Dictionary
+var lillypads : Array
+
+var current_frog
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
-	var collision_shape = $Floatables_Lillypad_01.get_node(\"Area2D/CollisionShape2D\")
+	current_frog = $Frog
+	
+	# --- Lillypad ---
+	create_lilly_pad($Floatables_Lillypad_01, Vector2(368, ROW_5_WATER))
+	create_lilly_pad($Floatables_Lillypad_02, Vector2(160, ROW_5_WATER))
+	create_lilly_pad($Floatables_Lillypad_03, Vector2(368 + 160, ROW_5_WATER))
+	create_lilly_pad($Floatables_Lillypad_04, Vector2(TILE_SIZE, ROW_5_WATER))
+	create_lilly_pad($Floatables_Lillypad_05, Vector2(DIMENSIONS.x - TILE_SIZE, ROW_5_WATER))
+	
+	lillypads.append($Floatables_Lillypad_01)
+	lillypads.append($Floatables_Lillypad_02)
+	lillypads.append($Floatables_Lillypad_03)
+	lillypads.append($Floatables_Lillypad_04)
+	lillypads.append($Floatables_Lillypad_05)
+	
+	# --- Turtle ---
+	create_turtle($Floatables_Turtle_01, Vector2(0, ROW_1_WATER), false)
+	create_turtle($Floatables_Turtle_02, Vector2(TILE_SIZE, ROW_1_WATER), false)
+	create_turtle($Floatables_Turtle_03, Vector2(TILE_SIZE * 2, ROW_1_WATER), false)
+	create_turtle($Floatables_Turtle_04, Vector2(160, ROW_1_WATER), false)
+	create_turtle($Floatables_Turtle_05, Vector2(160 + TILE_SIZE, ROW_1_WATER), false)
+	create_turtle($Floatables_Turtle_06, Vector2(160 + TILE_SIZE * 2, ROW_1_WATER), false)
+	create_turtle($Floatables_Turtle_07, Vector2(DIMENSIONS.x - TILE_SIZE, ROW_3_WATER), false)
+	create_turtle($Floatables_Turtle_08, Vector2(DIMENSIONS.x - TILE_SIZE * 2, ROW_3_WATER), false)
+	create_turtle($Floatables_Turtle_09, Vector2(DIMENSIONS.x - TILE_SIZE * 3, ROW_3_WATER), false)
+	create_turtle($Floatables_Turtle_10, Vector2(DIMENSIONS.x - TILE_SIZE * 6, ROW_3_WATER), false)
+	create_turtle($Floatables_Turtle_11, Vector2(DIMENSIONS.x - TILE_SIZE * 7, ROW_3_WATER), false)
+	create_turtle($Floatables_Turtle_12, Vector2(DIMENSIONS.x - TILE_SIZE * 8, ROW_3_WATER), false)
+	
+	# --- Log / Croc ---
+	create_log_croc($Floatables_Log_Croc_01, Vector2(DIMENSIONS.x, ROW_2_WATER), true)
+	create_log_croc($Floatables_Log_Croc_02, Vector2(DIMENSIONS.x - TILE_SIZE * 2, ROW_2_WATER), true)
+	create_log_croc($Floatables_Log_Croc_03, Vector2(DIMENSIONS.x - TILE_SIZE * 5, ROW_2_WATER), true)
+	create_log_croc($Floatables_Log_Croc_04, Vector2(DIMENSIONS.x - TILE_SIZE * 7, ROW_2_WATER), true)
+	create_log_croc($Floatables_Log_Croc_05, Vector2(DIMENSIONS.x, ROW_4_WATER), true)
+	create_log_croc($Floatables_Log_Croc_06, Vector2(TILE_SIZE * 2, ROW_4_WATER), true)
+	create_log_croc($Floatables_Log_Croc_07, Vector2(TILE_SIZE * 5, ROW_4_WATER), true)
+	create_log_croc($Floatables_Log_Croc_08, Vector2(TILE_SIZE * 7, ROW_4_WATER), true)
+	
+#	var new_log_croc = instantiate_and_set_owner_and_parent(floatable_scene, self)
+#	create_log_croc($Floatables_Log_Croc_08, Vector2(TILE_SIZE * 7, ROW_5_WATER), false)
+	
+	for entry in dict_interchangeable.keys():
+		entry.timer.connect(_on_floatables_interchangeable_timer)
+		entry.flotable_entered.connect(_on_floatables_interchangeable_body_entered)
+		entry.flotable_exited.connect(_on_floatables_interchangeable_body_exited)
+	
+	for lillypad in lillypads:
+		lillypad.flotable_entered.connect(_on_floatables_lillypad_body_entered)
+
+static func instantiate_and_set_owner_and_parent(scene : PackedScene, owner : Node2D) -> Node2D:
+	var node : Node2D = scene.instantiate()
+	owner.add_child(node)
+	node.set_owner(owner)
+	return node
+
+func create_lilly_pad(object, lillypad_position):
+	var collision_shape = object.get_node(\"Area2D/CollisionShape2D\")
 	var shape = RectangleShape2D.new()
 	shape.set_size(Vector2(32, 32))
 	
 	collision_shape.shape = shape
 	
+	object.sprite_frames.add_animation(\"lillypad01\")
+	object.sprite_frames.set_animation_loop(\"lillypad01\", true)
+	object.sprite_frames.add_animation(\"lillypad02\")
+	object.sprite_frames.set_animation_loop(\"lillypad02\", true)
+	
 #	add_frame(anim: StringName, texture: Texture2D, duration: float = 1.0, at_position: int = -1)
-	var image = Image.load_from_file(\"res://art/floatables/lillypad01.png\")
+	var image_lillypad_01 : Image
+	var image_selector = randi()%2 == 0
+	var animation_name : String
+	if image_selector:
+		image_lillypad_01 = Image.load_from_file(\"res://art/floatables/lillypad01.png\")
+		animation_name = \"lillypad01\"
+	else:
+		image_lillypad_01 = Image.load_from_file(\"res://art/floatables/lillypad02.png\")
+		animation_name = \"lillypad02\"
+	var texture_lillypad_01 = ImageTexture.create_from_image(image_lillypad_01)
+	object.sprite_frames.add_frame(animation_name, texture_lillypad_01, 1.0)
+	object.play(animation_name)
+	object.position = lillypad_position
+
+func create_turtle(object, turtle_position, flipped):
+	object.flip_h = flipped
+	var collision_shape = object.get_node(\"Area2D/CollisionShape2D\")
+	var shape = RectangleShape2D.new()
+	shape.set_size(Vector2(32, 32))
+	
+	collision_shape.shape = shape
+	
+	object.position = turtle_position
+	object.sprite_frames.add_animation(\"swim_turtle\")
+	object.sprite_frames.add_animation(\"sink\")
+	object.sprite_frames.set_animation_loop(\"swim_turtle\", true)
+	object.sprite_frames.set_animation_loop(\"sink\", false)
+	object.sprite_frames.set_animation_speed(\"sink\", 3.0)
+	
+	var image_turtle_00 = Image.load_from_file(\"res://art/floatables/turtle_swim_00.png\")
+	var texture_turtle_00 = ImageTexture.create_from_image(image_turtle_00)
+	
+	var image_turtle_01 = Image.load_from_file(\"res://art/floatables/turtle_swim_01.png\")
+	var texture_turtle_01 = ImageTexture.create_from_image(image_turtle_01)
+	
+	object.sprite_frames.add_frame(\"swim_turtle\", texture_turtle_00, 1.0)
+	object.sprite_frames.add_frame(\"swim_turtle\", texture_turtle_01, 2.0)
+	object.play(\"swim_turtle\")
+	
+	var image_sink_turtle_00 = Image.load_from_file(\"res://art/floatables/turtle_sink_00.png\")
+	var texture_sink_turtle_00 = ImageTexture.create_from_image(image_sink_turtle_00)
+	
+	var image_sink_turtle_01 = Image.load_from_file(\"res://art/floatables/turtle_sink_01.png\")
+	var texture_sink_turtle_01 = ImageTexture.create_from_image(image_sink_turtle_01)
+	
+	object.sprite_frames.add_frame(\"sink\", texture_sink_turtle_00, 1.0)
+	object.sprite_frames.add_frame(\"sink\", texture_sink_turtle_01, 2.0)
+	
+	dict_interchangeable[object] = false
+	if flipped:
+		dict_movement_direction[object] = -1.0
+	else:
+		dict_movement_direction[object] = 1.0
+
+func create_log_croc(object, log_position, flipped):
+	object.flip_h = flipped
+	var collision_shape = object.get_node(\"Area2D/CollisionShape2D\")
+	var shape = RectangleShape2D.new()
+	shape.set_size(Vector2(64, 32))
+	
+	collision_shape.shape = shape
+	
+	object.position = log_position
+	object.sprite_frames.add_animation(\"log\")
+	object.sprite_frames.add_animation(\"chomp\")
+	object.sprite_frames.set_animation_loop(\"log\", true)
+	object.sprite_frames.set_animation_loop(\"chomp\", false)
+	object.sprite_frames.set_animation_speed(\"chomp\", 5.0)
+	
+	var image = Image.load_from_file(\"res://art/floatables/log.png\")
 	var texture = ImageTexture.create_from_image(image)
-	$Floatables_Lillypad_01.sprite_frames.add_frame(\"default\", texture, 1.0)
-	$Floatables_Lillypad_01.play(\"default\")
-	$Floatables_Lillypad_01.position = Vector2(368, 240)
+	
+	object.sprite_frames.add_frame(\"log\", texture, 1.0)
+	object.play(\"log\")
+	
+#	var image_sink_turtle_00 = Image.load_from_file(\"res://art/floatables/turtle_sink_00.png\")
+#	var texture_sink_turtle_00 = ImageTexture.create_from_image(image_sink_turtle_00)
+#
+#	var image_sink_turtle_01 = Image.load_from_file(\"res://art/floatables/turtle_sink_01.png\")
+#	var texture_sink_turtle_01 = ImageTexture.create_from_image(image_sink_turtle_01)
+#
+#	object.sprite_frames.add_frame(\"sink\", texture_sink_turtle_00, 1.0)
+#	object.sprite_frames.add_frame(\"sink\", texture_sink_turtle_01, 2.0)
+	
+	dict_interchangeable[object] = false
+	if flipped:
+		dict_movement_direction[object] = -1.0
+	else:
+		dict_movement_direction[object] = 1.0
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta):
 	pass
+
+func _physics_process(delta):
+	for entry in dict_interchangeable.keys():
+		entry.position.x += SPEED * delta * dict_movement_direction[entry]
+	for floatable in on_floatables:
+		current_frog.set_on_floatable(true)
+		if \"Floatables_Turtle\" in floatable.name || \"Floatables_Log_Croc\" in floatable.name:
+			current_frog.set_floatable_velocity(Vector2(SPEED * dict_movement_direction[floatable], 0.0))
+		else:
+			current_frog.set_floatable_velocity(Vector2.ZERO)
+	if on_floatables.is_empty():
+		current_frog.set_on_floatable(false)
+		current_frog.set_floatable_velocity(Vector2.ZERO)
+	
+	for dict_entry in dict_interchangeable.keys():
+		floatable_off_screen_resetter(dict_entry)
+		if dict_interchangeable[dict_entry]:
+			if (dict_entry.get_animation() == \"sink\" && !dict_entry.is_playing()):
+				dict_entry.play(\"swim_turtle\")
+				dict_entry.get_node(\"Timer\").start()
+				dict_interchangeable[dict_entry] = !dict_interchangeable[dict_entry]
+		else:
+			if (dict_entry.get_animation() == \"sink\" && !dict_entry.is_playing()):
+				dict_entry.play(\"swim_turtle\")
+				on_floatables.erase(dict_entry)
+				dict_entry.hide()
+				dict_entry.get_node(\"Timer\").start()
+				dict_interchangeable[dict_entry] = !dict_interchangeable[dict_entry]
+
+func floatable_off_screen_resetter(object):
+	if object.position.x > DIMENSIONS.x + TILE_SIZE:
+		object.position.x = 0 - TILE_SIZE
+	if object.position.x < 0 - TILE_SIZE:
+		object.position.x = DIMENSIONS.x + TILE_SIZE
+
+func sink_or_swim_up(turtle):
+	turtle.get_node(\"Timer\").stop()
+	turtle.get_node(\"Timer\").wait_time = randf_range(1.0, 3.0)
+	if dict_interchangeable[turtle]:
+#		print(\"swim up\")
+		turtle.show()
+		turtle.play_backwards(\"sink\")
+	else:
+#		print(\"sink\")
+		turtle.play(\"sink\")
+
+func _on_floatables_interchangeable_body_entered(object):
+	on_floatables.append(object)
+
+func _on_floatables_interchangeable_body_exited(object):
+	on_floatables.erase(object)
+
+func _on_floatables_interchangeable_timer(object):
+	if \"Floatables_Turtle\" in object.name:
+		sink_or_swim_up(object)
+
+func _on_floatables_lillypad_body_entered(object):
+#	var new_frog = instantiate_and_set_owner_and_parent(frog_scene, self)
+#	new_frog.set_on_lillypad(true, object.position)
+#	new_frog.z_index = 999
+#	new_frog.get_node(\"CollisionShape2D\").disabled = true
+#	on_floatables.clear()
+	var image_frog = Image.load_from_file(\"res://art/frog/up_idle.png\")
+	var texture_frog = ImageTexture.create_from_image(image_frog)
+	var finish_frog = Sprite2D.new()
+	finish_frog.texture = texture_frog
+	add_child(finish_frog)
+	finish_frog.position = object.position
+	finish_frog.z_index = 999
+	
+#	current_frog.set_on_lillypad(false, object.position)
+	current_frog.reset()
+#	current_frog.get_node(\"CollisionShape2D\").disabled = false
+#	current_frog.get_node(\"AnimatedSprite2D\").play(\"up_jump\")
 "
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_4sdko"]
@@ -164,6 +403,8 @@ sources/0 = SubResource("TileSetAtlasSource_myyq3")
 
 [node name="Main" type="Node2D"]
 script = SubResource("GDScript_sxywy")
+floatable_scene = ExtResource("3_q2diy")
+frog_scene = ExtResource("1_oip3v")
 
 [node name="Area2D_water" type="Area2D" parent="."]
 
@@ -205,7 +446,7 @@ layer_4/modulate = Color(1, 1, 1, 1)
 layer_4/y_sort_enabled = false
 layer_4/y_sort_origin = 0
 layer_4/z_index = 4
-layer_4/tile_data = PackedInt32Array(917529, 196608, 4, 917505, 196608, 4, 524290, 196608, 4, 524311, 196608, 4, 720899, 262144, 0, 720898, 262144, 0, 720897, 262144, 0, 720900, 262144, 0, 720901, 262144, 0, 720902, 262144, 2, 720896, 262144, 0, 720905, 262144, 1, 720906, 262144, 0, 720907, 262144, 0, 720908, 262144, 0, 720909, 262144, 0, 720910, 262144, 0, 720911, 262144, 0, 720912, 262144, 0, 720913, 262144, 0, 720914, 262144, 2, 720917, 262144, 1, 720918, 262144, 0, 720919, 262144, 0, 720920, 262144, 0, 720921, 262144, 0, 720922, 262144, 0, 524292, 262144, 0, 524293, 262144, 0, 524294, 262144, 0, 524295, 262144, 0, 524296, 262144, 0, 524297, 262144, 2, 524301, 262144, 1, 524302, 262144, 0, 524303, 262144, 0, 524304, 262144, 0, 524305, 262144, 0, 524306, 262144, 0, 524307, 262144, 0, 524308, 262144, 0, 524309, 262144, 0, 524310, 262144, 2, 524291, 262144, 1, 917515, 196608, 4, 917511, 196608, 4, 917512, 196608, 4, 917524, 196608, 4, 917519, 196608, 4)
+layer_4/tile_data = PackedInt32Array(917529, 196608, 4, 917505, 196608, 4, 524290, 196608, 4, 524311, 196608, 4, 720899, 262144, 0, 720898, 262144, 0, 720897, 262144, 0, 720900, 262144, 0, 720901, 262144, 0, 720902, 262144, 2, 720896, 262144, 0, 720905, 262144, 1, 720906, 262144, 0, 720907, 262144, 0, 720908, 262144, 0, 720909, 262144, 0, 720910, 262144, 0, 720911, 262144, 0, 720912, 262144, 0, 720913, 262144, 0, 720914, 262144, 2, 720917, 262144, 1, 720918, 262144, 0, 720919, 262144, 0, 720920, 262144, 0, 720921, 262144, 0, 720922, 262144, 0, 524292, 262144, 0, 524293, 262144, 0, 524294, 262144, 0, 524295, 262144, 0, 524296, 262144, 0, 524297, 262144, 2, 524301, 262144, 1, 524302, 262144, 0, 524303, 262144, 0, 524304, 262144, 0, 524305, 262144, 0, 524306, 262144, 0, 524307, 262144, 0, 524308, 262144, 0, 524309, 262144, 0, 524310, 262144, 2, 524291, 262144, 1, 917511, 196608, 4, 917512, 196608, 4, 917524, 196608, 4, 917519, 196608, 4)
 
 [node name="Frog" parent="." instance=ExtResource("1_oip3v")]
 z_index = 999
@@ -213,6 +454,54 @@ position = Vector2(400, 464)
 up_direction = Vector2(0.999997, -0.00243308)
 
 [node name="Floatables_Lillypad_01" parent="." instance=ExtResource("3_q2diy")]
+
+[node name="Floatables_Lillypad_02" parent="." instance=ExtResource("3_q2diy")]
+
+[node name="Floatables_Lillypad_03" parent="." instance=ExtResource("3_q2diy")]
+
+[node name="Floatables_Lillypad_04" parent="." instance=ExtResource("3_q2diy")]
+
+[node name="Floatables_Lillypad_05" parent="." instance=ExtResource("3_q2diy")]
+
+[node name="Floatables_Turtle_01" parent="." instance=ExtResource("3_q2diy")]
+
+[node name="Floatables_Turtle_02" parent="." instance=ExtResource("3_q2diy")]
+
+[node name="Floatables_Turtle_03" parent="." instance=ExtResource("3_q2diy")]
+
+[node name="Floatables_Turtle_04" parent="." instance=ExtResource("3_q2diy")]
+
+[node name="Floatables_Turtle_05" parent="." instance=ExtResource("3_q2diy")]
+
+[node name="Floatables_Turtle_06" parent="." instance=ExtResource("3_q2diy")]
+
+[node name="Floatables_Turtle_07" parent="." instance=ExtResource("3_q2diy")]
+
+[node name="Floatables_Turtle_08" parent="." instance=ExtResource("3_q2diy")]
+
+[node name="Floatables_Turtle_09" parent="." instance=ExtResource("3_q2diy")]
+
+[node name="Floatables_Turtle_10" parent="." instance=ExtResource("3_q2diy")]
+
+[node name="Floatables_Turtle_11" parent="." instance=ExtResource("3_q2diy")]
+
+[node name="Floatables_Turtle_12" parent="." instance=ExtResource("3_q2diy")]
+
+[node name="Floatables_Log_Croc_01" parent="." instance=ExtResource("3_q2diy")]
+
+[node name="Floatables_Log_Croc_02" parent="." instance=ExtResource("3_q2diy")]
+
+[node name="Floatables_Log_Croc_03" parent="." instance=ExtResource("3_q2diy")]
+
+[node name="Floatables_Log_Croc_04" parent="." instance=ExtResource("3_q2diy")]
+
+[node name="Floatables_Log_Croc_05" parent="." instance=ExtResource("3_q2diy")]
+
+[node name="Floatables_Log_Croc_06" parent="." instance=ExtResource("3_q2diy")]
+
+[node name="Floatables_Log_Croc_07" parent="." instance=ExtResource("3_q2diy")]
+
+[node name="Floatables_Log_Croc_08" parent="." instance=ExtResource("3_q2diy")]
 
 [connection signal="body_entered" from="Area2D_water" to="Frog" method="_on_area_2d_water_body_entered"]
 [connection signal="body_exited" from="Area2D_water" to="Frog" method="_on_area_2d_water_body_exited"]
