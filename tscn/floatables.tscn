@@ -1,6 +1,7 @@
 [gd_scene load_steps=3 format=3 uid="uid://d207u0lh0i81m"]
 
 [sub_resource type="SpriteFrames" id="SpriteFrames_f766f"]
+animations = []
 
 [sub_resource type="GDScript" id="GDScript_ulb70"]
 script/source = "class_name Floatables
@@ -35,6 +36,7 @@ func _on_timer_timeout():
 z_index = 100
 texture_filter = 1
 sprite_frames = SubResource("SpriteFrames_f766f")
+animation = &""
 script = SubResource("GDScript_ulb70")
 
 [node name="Area2D" type="Area2D" parent="."]

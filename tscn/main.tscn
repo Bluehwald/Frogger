@@ -23,6 +23,7 @@ const ROW_5_WATER = ROW_4_WATER - 32
 var on_floatables : Array
 var dict_interchangeable : Dictionary # stores a false for the object for a simple state machine, i.e. sink / swim up for turtles
 var dict_movement_direction : Dictionary
+var dict_taken_lillypads : Dictionary
 var lillypads : Array
 
 var current_frog
@@ -32,6 +33,9 @@ func _ready():
 	current_frog = $Frog
 	
 	# --- Lillypad ---
+	# create animations just once! They are (somehow) shared over all objects ¯\\_(ツ)_/¯
+	create_lilly_pad_animations($Floatables_Lillypad_01)
+	
 	create_lilly_pad($Floatables_Lillypad_01, Vector2(368, ROW_5_WATER))
 	create_lilly_pad($Floatables_Lillypad_02, Vector2(160, ROW_5_WATER))
 	create_lilly_pad($Floatables_Lillypad_03, Vector2(368 + 160, ROW_5_WATER))
@@ -43,8 +47,16 @@ func _ready():
 	lillypads.append($Floatables_Lillypad_03)
 	lillypads.append($Floatables_Lillypad_04)
 	lillypads.append($Floatables_Lillypad_05)
+	dict_taken_lillypads[$Floatables_Lillypad_01] = false
+	dict_taken_lillypads[$Floatables_Lillypad_02] = false
+	dict_taken_lillypads[$Floatables_Lillypad_03] = false
+	dict_taken_lillypads[$Floatables_Lillypad_04] = false
+	dict_taken_lillypads[$Floatables_Lillypad_05] = false
 	
 	# --- Turtle ---
+	# create animations just once! They are (somehow) shared over all objects ¯\\_(ツ)_/¯
+	create_turtle_animations($Floatables_Turtle_01)
+	
 	create_turtle($Floatables_Turtle_01, Vector2(0, ROW_1_WATER), false)
 	create_turtle($Floatables_Turtle_02, Vector2(TILE_SIZE, ROW_1_WATER), false)
 	create_turtle($Floatables_Turtle_03, Vector2(TILE_SIZE * 2, ROW_1_WATER), false)
@@ -59,6 +71,8 @@ func _ready():
 	create_turtle($Floatables_Turtle_12, Vector2(DIMENSIONS.x - TILE_SIZE * 8, ROW_3_WATER), false)
 	
 	# --- Log / Croc ---
+	create_log_croc_animations($Floatables_Log_Croc_01)
+	
 	create_log_croc($Floatables_Log_Croc_01, Vector2(DIMENSIONS.x, ROW_2_WATER), true)
 	create_log_croc($Floatables_Log_Croc_02, Vector2(DIMENSIONS.x - TILE_SIZE * 2, ROW_2_WATER), true)
 	create_log_croc($Floatables_Log_Croc_03, Vector2(DIMENSIONS.x - TILE_SIZE * 5, ROW_2_WATER), true)
@@ -92,25 +106,31 @@ func create_lilly_pad(object, lillypad_position):
 	
 	collision_shape.shape = shape
 	
+#	add_frame(anim: StringName, texture: Texture2D, duration: float = 1.0, at_position: int = -1)
+	var image_selector = randi()%2 == 0
+	var animation_name : String
+	if image_selector:
+		animation_name = \"lillypad01\"
+	else:
+		animation_name = \"lillypad02\"
+	
+	object.play(animation_name)
+	object.position = lillypad_position
+
+func create_lilly_pad_animations(object):
 	object.sprite_frames.add_animation(\"lillypad01\")
 	object.sprite_frames.set_animation_loop(\"lillypad01\", true)
 	object.sprite_frames.add_animation(\"lillypad02\")
 	object.sprite_frames.set_animation_loop(\"lillypad02\", true)
 	
-#	add_frame(anim: StringName, texture: Texture2D, duration: float = 1.0, at_position: int = -1)
-	var image_lillypad_01 : Image
-	var image_selector = randi()%2 == 0
-	var animation_name : String
-	if image_selector:
-		image_lillypad_01 = Image.load_from_file(\"res://art/floatables/lillypad01.png\")
-		animation_name = \"lillypad01\"
-	else:
-		image_lillypad_01 = Image.load_from_file(\"res://art/floatables/lillypad02.png\")
-		animation_name = \"lillypad02\"
+	var image_lillypad_01 = Image.load_from_file(\"res://art/floatables/lillypad01.png\")
 	var texture_lillypad_01 = ImageTexture.create_from_image(image_lillypad_01)
-	object.sprite_frames.add_frame(animation_name, texture_lillypad_01, 1.0)
-	object.play(animation_name)
-	object.position = lillypad_position
+	
+	var image_lillypad_02 = Image.load_from_file(\"res://art/floatables/lillypad02.png\")
+	var texture_lillypad_02 = ImageTexture.create_from_image(image_lillypad_02)
+	
+	object.sprite_frames.add_frame(\"lillypad01\", texture_lillypad_01, 1.0)
+	object.sprite_frames.add_frame(\"lillypad02\", texture_lillypad_02, 1.0)
 
 func create_turtle(object, turtle_position, flipped):
 	object.flip_h = flipped
@@ -121,11 +141,18 @@ func create_turtle(object, turtle_position, flipped):
 	collision_shape.shape = shape
 	
 	object.position = turtle_position
+	
+	object.play(\"swim_turtle\")
+	
+	dict_interchangeable[object] = false
+	if flipped:
+		dict_movement_direction[object] = -1.0
+	else:
+		dict_movement_direction[object] = 1.0
+
+func create_turtle_animations(object):
 	object.sprite_frames.add_animation(\"swim_turtle\")
 	object.sprite_frames.add_animation(\"sink\")
-	object.sprite_frames.set_animation_loop(\"swim_turtle\", true)
-	object.sprite_frames.set_animation_loop(\"sink\", false)
-	object.sprite_frames.set_animation_speed(\"sink\", 3.0)
 	
 	var image_turtle_00 = Image.load_from_file(\"res://art/floatables/turtle_swim_00.png\")
 	var texture_turtle_00 = ImageTexture.create_from_image(image_turtle_00)
@@ -133,9 +160,8 @@ func create_turtle(object, turtle_position, flipped):
 	var image_turtle_01 = Image.load_from_file(\"res://art/floatables/turtle_swim_01.png\")
 	var texture_turtle_01 = ImageTexture.create_from_image(image_turtle_01)
 	
-	object.sprite_frames.add_frame(\"swim_turtle\", texture_turtle_00, 1.0)
-	object.sprite_frames.add_frame(\"swim_turtle\", texture_turtle_01, 2.0)
-	object.play(\"swim_turtle\")
+	object.sprite_frames.add_frame(\"swim_turtle\", texture_turtle_00, 3.0)
+	object.sprite_frames.add_frame(\"swim_turtle\", texture_turtle_01, 3.0)
 	
 	var image_sink_turtle_00 = Image.load_from_file(\"res://art/floatables/turtle_sink_00.png\")
 	var texture_sink_turtle_00 = ImageTexture.create_from_image(image_sink_turtle_00)
@@ -143,14 +169,11 @@ func create_turtle(object, turtle_position, flipped):
 	var image_sink_turtle_01 = Image.load_from_file(\"res://art/floatables/turtle_sink_01.png\")
 	var texture_sink_turtle_01 = ImageTexture.create_from_image(image_sink_turtle_01)
 	
-	object.sprite_frames.add_frame(\"sink\", texture_sink_turtle_00, 1.0)
-	object.sprite_frames.add_frame(\"sink\", texture_sink_turtle_01, 2.0)
+	object.sprite_frames.add_frame(\"sink\", texture_sink_turtle_00, 20.0)
+	object.sprite_frames.add_frame(\"sink\", texture_sink_turtle_01, 20.0)
 	
-	dict_interchangeable[object] = false
-	if flipped:
-		dict_movement_direction[object] = -1.0
-	else:
-		dict_movement_direction[object] = 1.0
+	object.sprite_frames.set_animation_loop(\"swim_turtle\", true)
+	object.sprite_frames.set_animation_loop(\"sink\", false)
 
 func create_log_croc(object, log_position, flipped):
 	object.flip_h = flipped
@@ -161,40 +184,69 @@ func create_log_croc(object, log_position, flipped):
 	collision_shape.shape = shape
 	
 	object.position = log_position
+	
+	object.play(\"log\")
+	
+	var croc_selector = randi()%3 == 0
+	
+	if croc_selector:
+		dict_interchangeable[object] = true
+	else:
+		dict_interchangeable[object] = false
+	
+	if flipped:
+		dict_movement_direction[object] = -1.0
+	else:
+		dict_movement_direction[object] = 1.0
+
+func create_log_croc_animations(object):
 	object.sprite_frames.add_animation(\"log\")
 	object.sprite_frames.add_animation(\"chomp\")
 	object.sprite_frames.set_animation_loop(\"log\", true)
 	object.sprite_frames.set_animation_loop(\"chomp\", false)
-	object.sprite_frames.set_animation_speed(\"chomp\", 5.0)
 	
 	var image = Image.load_from_file(\"res://art/floatables/log.png\")
 	var texture = ImageTexture.create_from_image(image)
 	
 	object.sprite_frames.add_frame(\"log\", texture, 1.0)
-	object.play(\"log\")
 	
-#	var image_sink_turtle_00 = Image.load_from_file(\"res://art/floatables/turtle_sink_00.png\")
-#	var texture_sink_turtle_00 = ImageTexture.create_from_image(image_sink_turtle_00)
-#
-#	var image_sink_turtle_01 = Image.load_from_file(\"res://art/floatables/turtle_sink_01.png\")
-#	var texture_sink_turtle_01 = ImageTexture.create_from_image(image_sink_turtle_01)
-#
-#	object.sprite_frames.add_frame(\"sink\", texture_sink_turtle_00, 1.0)
-#	object.sprite_frames.add_frame(\"sink\", texture_sink_turtle_01, 2.0)
+	var image_chomp_00 = Image.load_from_file(\"res://art/floatables/crocodile_chomp_00.png\")
+	var texture_chomp_00 = ImageTexture.create_from_image(image_chomp_00)
 	
-	dict_interchangeable[object] = false
-	if flipped:
-		dict_movement_direction[object] = -1.0
-	else:
-		dict_movement_direction[object] = 1.0
+	var image_chomp_01 = Image.load_from_file(\"res://art/floatables/crocodile_chomp_01.png\")
+	var texture_chomp_01 = ImageTexture.create_from_image(image_chomp_01)
+	
+	# add them multiple times so the croc choms some times and then stops and turns into a log again
+	for i in range(1, 6):
+		object.sprite_frames.add_frame(\"chomp\", texture_chomp_00, 1.0)
+		object.sprite_frames.add_frame(\"chomp\", texture_chomp_01, 1.0)
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta):
 	pass
 
 func _physics_process(delta):
-	for entry in dict_interchangeable.keys():
-		entry.position.x += SPEED * delta * dict_movement_direction[entry]
+	for dict_entry in dict_interchangeable.keys():
+		floatable_off_screen_resetter(dict_entry)
+		dict_entry.position.x += SPEED * delta * dict_movement_direction[dict_entry]
+		
+		if dict_interchangeable[dict_entry]:
+			# !dict_entry.is_playing() indicates whether the animation is finished or not
+			if (dict_entry.get_animation() == \"sink\" && !dict_entry.is_playing()):
+				dict_entry.play(\"swim_turtle\")
+				dict_entry.get_node(\"Timer\").start()
+				dict_interchangeable[dict_entry] = !dict_interchangeable[dict_entry]
+			if (dict_entry.get_animation() == \"chomp\" && !dict_entry.is_playing()):
+				dict_entry.play(\"log\")
+				dict_entry.get_node(\"Timer\").start()
+		else:
+			if (dict_entry.get_animation() == \"sink\" && !dict_entry.is_playing()):
+				dict_entry.play(\"swim_turtle\")
+				on_floatables.erase(dict_entry)
+				dict_entry.hide()
+				dict_entry.get_node(\"Timer\").start()
+				dict_interchangeable[dict_entry] = !dict_interchangeable[dict_entry]
+		
 	for floatable in on_floatables:
 		current_frog.set_on_floatable(true)
 		if \"Floatables_Turtle\" in floatable.name || \"Floatables_Log_Croc\" in floatable.name:
@@ -204,21 +256,6 @@ func _physics_process(delta):
 	if on_floatables.is_empty():
 		current_frog.set_on_floatable(false)
 		current_frog.set_floatable_velocity(Vector2.ZERO)
-	
-	for dict_entry in dict_interchangeable.keys():
-		floatable_off_screen_resetter(dict_entry)
-		if dict_interchangeable[dict_entry]:
-			if (dict_entry.get_animation() == \"sink\" && !dict_entry.is_playing()):
-				dict_entry.play(\"swim_turtle\")
-				dict_entry.get_node(\"Timer\").start()
-				dict_interchangeable[dict_entry] = !dict_interchangeable[dict_entry]
-		else:
-			if (dict_entry.get_animation() == \"sink\" && !dict_entry.is_playing()):
-				dict_entry.play(\"swim_turtle\")
-				on_floatables.erase(dict_entry)
-				dict_entry.hide()
-				dict_entry.get_node(\"Timer\").start()
-				dict_interchangeable[dict_entry] = !dict_interchangeable[dict_entry]
 
 func floatable_off_screen_resetter(object):
 	if object.position.x > DIMENSIONS.x + TILE_SIZE:
@@ -230,12 +267,15 @@ func sink_or_swim_up(turtle):
 	turtle.get_node(\"Timer\").stop()
 	turtle.get_node(\"Timer\").wait_time = randf_range(1.0, 3.0)
 	if dict_interchangeable[turtle]:
-#		print(\"swim up\")
 		turtle.show()
 		turtle.play_backwards(\"sink\")
 	else:
-#		print(\"sink\")
 		turtle.play(\"sink\")
+
+func chomp(log_croc):
+	log_croc.get_node(\"Timer\").stop()
+	log_croc.get_node(\"Timer\").wait_time = randf_range(1.0, 3.0)
+	log_croc.play(\"chomp\")
 
 func _on_floatables_interchangeable_body_entered(object):
 	on_floatables.append(object)
@@ -246,25 +286,24 @@ func _on_floatables_interchangeable_body_exited(object):
 func _on_floatables_interchangeable_timer(object):
 	if \"Floatables_Turtle\" in object.name:
 		sink_or_swim_up(object)
+	if \"Floatables_Log_Croc\" in object.name && dict_interchangeable[object]:
+		chomp(object)
 
 func _on_floatables_lillypad_body_entered(object):
-#	var new_frog = instantiate_and_set_owner_and_parent(frog_scene, self)
-#	new_frog.set_on_lillypad(true, object.position)
-#	new_frog.z_index = 999
-#	new_frog.get_node(\"CollisionShape2D\").disabled = true
-#	on_floatables.clear()
-	var image_frog = Image.load_from_file(\"res://art/frog/up_idle.png\")
-	var texture_frog = ImageTexture.create_from_image(image_frog)
-	var finish_frog = Sprite2D.new()
-	finish_frog.texture = texture_frog
-	add_child(finish_frog)
-	finish_frog.position = object.position
-	finish_frog.z_index = 999
-	
-#	current_frog.set_on_lillypad(false, object.position)
-	current_frog.reset()
-#	current_frog.get_node(\"CollisionShape2D\").disabled = false
-#	current_frog.get_node(\"AnimatedSprite2D\").play(\"up_jump\")
+	if (!dict_taken_lillypads[object]):
+		dict_taken_lillypads[object] = true
+		var image_frog = Image.load_from_file(\"res://art/frog/up_idle.png\")
+		image_frog.resize(32, 32, Image.INTERPOLATE_NEAREST)
+		var texture_frog = ImageTexture.create_from_image(image_frog)
+		var finish_frog = Sprite2D.new()
+		finish_frog.texture = texture_frog
+		add_child(finish_frog)
+		finish_frog.position = object.position
+		finish_frog.z_index = 999
+		
+		current_frog.reset()
+	else:
+		pass
 "
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_4sdko"]
