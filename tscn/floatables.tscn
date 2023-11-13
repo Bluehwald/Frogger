@@ -9,6 +9,7 @@ extends AnimatedSprite2D
 
 signal flotable_entered(object)
 signal flotable_exited(object)
+
 signal timer(object)
 
 # Called when the node enters the scene tree for the first time.
@@ -30,6 +31,10 @@ func _on_area_2d_body_exited(body):
 
 func _on_timer_timeout():
 	timer.emit(self)
+
+func _on_area_2d_death_zone_body_entered(body):
+	if (body.name == \"Frog\"):
+		body.death()
 "
 
 [node name="Floatables" type="AnimatedSprite2D"]
@@ -48,6 +53,15 @@ z_index = 102
 [node name="Timer" type="Timer" parent="."]
 wait_time = 3.0
 
+[node name="Area2DDeathZone" type="Area2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Area2DDeathZone"]
+
+[node name="StaticBody2DLillyPadTaken" type="StaticBody2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="StaticBody2DLillyPadTaken"]
+
 [connection signal="body_entered" from="Area2D" to="." method="_on_area_2d_body_entered"]
 [connection signal="body_exited" from="Area2D" to="." method="_on_area_2d_body_exited"]
 [connection signal="timeout" from="Timer" to="." method="_on_timer_timeout"]
+[connection signal="body_entered" from="Area2DDeathZone" to="." method="_on_area_2d_death_zone_body_entered"]

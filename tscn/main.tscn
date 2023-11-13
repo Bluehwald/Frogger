@@ -191,6 +191,14 @@ func create_log_croc(object, log_position, flipped):
 	
 	if croc_selector:
 		dict_interchangeable[object] = true
+		var collision_shape_death_zone = object.get_node(\"Area2DDeathZone/CollisionShape2D\")
+		var shape_death_zone = RectangleShape2D.new()
+		shape_death_zone.set_size(Vector2(24, 32))
+		collision_shape_death_zone.position.x -= 20
+		
+		collision_shape_death_zone.shape = shape_death_zone
+		# Disable the CollisionShape2D
+		collision_shape_death_zone.set_deferred(\"disabled\", true)
 	else:
 		dict_interchangeable[object] = false
 	
@@ -239,6 +247,7 @@ func _physics_process(delta):
 			if (dict_entry.get_animation() == \"chomp\" && !dict_entry.is_playing()):
 				dict_entry.play(\"log\")
 				dict_entry.get_node(\"Timer\").start()
+				dict_entry.get_node(\"Area2DDeathZone/CollisionShape2D\").set_deferred(\"disabled\", true)
 		else:
 			if (dict_entry.get_animation() == \"sink\" && !dict_entry.is_playing()):
 				dict_entry.play(\"swim_turtle\")
@@ -273,6 +282,7 @@ func sink_or_swim_up(turtle):
 		turtle.play(\"sink\")
 
 func chomp(log_croc):
+	log_croc.get_node(\"Area2DDeathZone/CollisionShape2D\").set_deferred(\"disabled\", false)
 	log_croc.get_node(\"Timer\").stop()
 	log_croc.get_node(\"Timer\").wait_time = randf_range(1.0, 3.0)
 	log_croc.play(\"chomp\")
@@ -293,7 +303,6 @@ func _on_floatables_lillypad_body_entered(object):
 	if (!dict_taken_lillypads[object]):
 		dict_taken_lillypads[object] = true
 		var image_frog = Image.load_from_file(\"res://art/frog/up_idle.png\")
-		image_frog.resize(32, 32, Image.INTERPOLATE_NEAREST)
 		var texture_frog = ImageTexture.create_from_image(image_frog)
 		var finish_frog = Sprite2D.new()
 		finish_frog.texture = texture_frog
@@ -302,8 +311,13 @@ func _on_floatables_lillypad_body_entered(object):
 		finish_frog.z_index = 999
 		
 		current_frog.reset()
-	else:
-		pass
+		
+		# activate StaticBody2D such that if the player wants to jump towards the same lilly pad twice they get blocked
+		var collison_shape = object.get_node(\"StaticBody2DLillyPadTaken/CollisionShape2D\")
+		var shape = RectangleShape2D.new()
+		shape.set_size(Vector2(32, 32))
+		
+		collison_shape.shape = shape
 "
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_4sdko"]
