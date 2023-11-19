@@ -1,0 +1,11 @@
+[gd_scene format=3 uid="uid://c1gfcihyes3mo"]
+
+[node name="vehicles" type="Sprite2D"]
+
+[node name="front_wheel" type="Sprite2D" parent="."]
+
+[node name="back_wheel" type="Sprite2D" parent="."]
+
+[node name="Area2D" type="Area2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D"]

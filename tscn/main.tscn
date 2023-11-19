@@ -1,7 +1,8 @@
-[gd_scene load_steps=8 format=3 uid="uid://1edh2rs6gc4v"]
+[gd_scene load_steps=9 format=3 uid="uid://1edh2rs6gc4v"]
 
 [ext_resource type="PackedScene" uid="uid://j32perqlaaws" path="res://tscn/frog.tscn" id="1_oip3v"]
 [ext_resource type="Texture2D" uid="uid://cp5jilmte88xo" path="res://art/tileset/tileset.png" id="2_xnago"]
+[ext_resource type="PackedScene" uid="uid://c1gfcihyes3mo" path="res://tscn/vehicles.tscn" id="3_fphiq"]
 [ext_resource type="PackedScene" uid="uid://d207u0lh0i81m" path="res://tscn/floatables.tscn" id="3_q2diy"]
 
 [sub_resource type="GDScript" id="GDScript_sxywy"]
@@ -12,13 +13,20 @@ const TILE_SIZE = 32.0
 const DIMENSIONS = Vector2(854, 480)
 
 const ROW_1_WATER = 240
-const ROW_2_WATER = ROW_1_WATER - 32
-const ROW_3_WATER = ROW_2_WATER - 32
-const ROW_4_WATER = ROW_3_WATER - 32
-const ROW_5_WATER = ROW_4_WATER - 32
+const ROW_2_WATER = ROW_1_WATER - TILE_SIZE
+const ROW_3_WATER = ROW_2_WATER - TILE_SIZE
+const ROW_4_WATER = ROW_3_WATER - TILE_SIZE
+const ROW_5_WATER = ROW_4_WATER - TILE_SIZE
+
+const ROW_1_STREET = ROW_1_WATER + TILE_SIZE + (TILE_SIZE * 4)
+const ROW_2_STREET = ROW_1_WATER + TILE_SIZE + (TILE_SIZE * 3)
+const ROW_3_STREET = ROW_1_WATER + TILE_SIZE + (TILE_SIZE * 2)
+const ROW_4_STREET = ROW_1_WATER + TILE_SIZE + (TILE_SIZE * 1)
+const ROW_5_STREET = ROW_1_WATER + TILE_SIZE
 
 @export var floatable_scene : PackedScene
 @export var frog_scene : PackedScene
+@export var vehicle_scene: PackedScene
 
 var on_floatables : Array
 var dict_interchangeable : Dictionary # stores a false for the object for a simple state machine, i.e. sink / swim up for turtles
@@ -84,11 +92,16 @@ func _ready():
 	
 #	var new_log_croc = instantiate_and_set_owner_and_parent(floatable_scene, self)
 #	create_log_croc($Floatables_Log_Croc_08, Vector2(TILE_SIZE * 7, ROW_5_WATER), false)
+
+	var new_vehicle = instantiate_and_set_owner_and_parent(vehicle_scene, self)
+	create_vehicle(new_vehicle, Vector2(TILE_SIZE * 3, ROW_1_STREET), false)
 	
 	for entry in dict_interchangeable.keys():
-		entry.timer.connect(_on_floatables_interchangeable_timer)
-		entry.flotable_entered.connect(_on_floatables_interchangeable_body_entered)
-		entry.flotable_exited.connect(_on_floatables_interchangeable_body_exited)
+		if \"Floatables\" in entry.name:
+			print(entry)
+			entry.timer.connect(_on_floatables_interchangeable_timer)
+			entry.flotable_entered.connect(_on_floatables_interchangeable_body_entered)
+			entry.flotable_exited.connect(_on_floatables_interchangeable_body_exited)
 	
 	for lillypad in lillypads:
 		lillypad.flotable_entered.connect(_on_floatables_lillypad_body_entered)
@@ -229,6 +242,49 @@ func create_log_croc_animations(object):
 		object.sprite_frames.add_frame(\"chomp\", texture_chomp_00, 1.0)
 		object.sprite_frames.add_frame(\"chomp\", texture_chomp_01, 1.0)
 
+func create_vehicle(object, position, flipped):
+	object.flip_h = flipped
+	var collision_shape = object.get_node(\"Area2D/CollisionShape2D\")
+	var shape = RectangleShape2D.new()
+#	shape.set_size(Vector2(64, 32))
+	shape.set_size(Vector2(48, 32))
+	
+	collision_shape.shape = shape
+	collision_shape.position.x -= 8
+	
+	object.position = position
+	
+	var texture_selector = randi_range(1, 7)
+	
+	var image
+	var texture
+	
+	match texture_selector:
+		1:
+			image = Image.load_from_file(\"res://art/vehicles/bus.png\")
+		2:
+			image = Image.load_from_file(\"res://art/vehicles/car_dark_blue.png\")
+		3:
+			image = Image.load_from_file(\"res://art/vehicles/car_green.png\")
+		4:
+			image = Image.load_from_file(\"res://art/vehicles/car_light_blue.png\")
+		5:
+			image = Image.load_from_file(\"res://art/vehicles/car_red.png\")
+		6:
+			image = Image.load_from_file(\"res://art/vehicles/car_white.png\")
+		7:
+			image = Image.load_from_file(\"res://art/vehicles/taxi.png\")
+	texture = ImageTexture.create_from_image(image)
+	
+	object.texture = texture
+	
+	dict_interchangeable[object] = false
+	
+	if flipped:
+		dict_movement_direction[object] = -1.0
+	else:
+		dict_movement_direction[object] = 1.0
+
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta):
 	pass
@@ -249,12 +305,13 @@ func _physics_process(delta):
 				dict_entry.get_node(\"Timer\").start()
 				dict_entry.get_node(\"Area2DDeathZone/CollisionShape2D\").set_deferred(\"disabled\", true)
 		else:
-			if (dict_entry.get_animation() == \"sink\" && !dict_entry.is_playing()):
-				dict_entry.play(\"swim_turtle\")
-				on_floatables.erase(dict_entry)
-				dict_entry.hide()
-				dict_entry.get_node(\"Timer\").start()
-				dict_interchangeable[dict_entry] = !dict_interchangeable[dict_entry]
+			if \"Floatables\" in dict_entry.name:
+				if (dict_entry.get_animation() == \"sink\" && !dict_entry.is_playing()):
+					dict_entry.play(\"swim_turtle\")
+					on_floatables.erase(dict_entry)
+					dict_entry.hide()
+					dict_entry.get_node(\"Timer\").start()
+					dict_interchangeable[dict_entry] = !dict_interchangeable[dict_entry]
 		
 	for floatable in on_floatables:
 		current_frog.set_on_floatable(true)
@@ -458,6 +515,7 @@ sources/0 = SubResource("TileSetAtlasSource_myyq3")
 script = SubResource("GDScript_sxywy")
 floatable_scene = ExtResource("3_q2diy")
 frog_scene = ExtResource("1_oip3v")
+vehicle_scene = ExtResource("3_fphiq")
 
 [node name="Area2D_water" type="Area2D" parent="."]
 
