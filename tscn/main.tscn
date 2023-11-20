@@ -18,11 +18,11 @@ const ROW_3_WATER = ROW_2_WATER - TILE_SIZE
 const ROW_4_WATER = ROW_3_WATER - TILE_SIZE
 const ROW_5_WATER = ROW_4_WATER - TILE_SIZE
 
-const ROW_1_STREET = ROW_1_WATER + TILE_SIZE + (TILE_SIZE * 4)
-const ROW_2_STREET = ROW_1_WATER + TILE_SIZE + (TILE_SIZE * 3)
-const ROW_3_STREET = ROW_1_WATER + TILE_SIZE + (TILE_SIZE * 2)
-const ROW_4_STREET = ROW_1_WATER + TILE_SIZE + (TILE_SIZE * 1)
-const ROW_5_STREET = ROW_1_WATER + TILE_SIZE
+const ROW_1_STREET = ROW_1_WATER + TILE_SIZE + (TILE_SIZE * 5)
+const ROW_2_STREET = ROW_1_WATER + TILE_SIZE + (TILE_SIZE * 4)
+const ROW_3_STREET = ROW_1_WATER + TILE_SIZE + (TILE_SIZE * 3)
+const ROW_4_STREET = ROW_1_WATER + TILE_SIZE + (TILE_SIZE * 2)
+const ROW_5_STREET = ROW_1_WATER + TILE_SIZE + (TILE_SIZE * 1)
 
 @export var floatable_scene : PackedScene
 @export var frog_scene : PackedScene
@@ -45,10 +45,10 @@ func _ready():
 	create_lilly_pad_animations($Floatables_Lillypad_01)
 	
 	create_lilly_pad($Floatables_Lillypad_01, Vector2(368, ROW_5_WATER))
-	create_lilly_pad($Floatables_Lillypad_02, Vector2(160, ROW_5_WATER))
+	create_lilly_pad($Floatables_Lillypad_02, Vector2(200, ROW_5_WATER))
 	create_lilly_pad($Floatables_Lillypad_03, Vector2(368 + 160, ROW_5_WATER))
-	create_lilly_pad($Floatables_Lillypad_04, Vector2(TILE_SIZE, ROW_5_WATER))
-	create_lilly_pad($Floatables_Lillypad_05, Vector2(DIMENSIONS.x - TILE_SIZE, ROW_5_WATER))
+	create_lilly_pad($Floatables_Lillypad_04, Vector2(TILE_SIZE * 2, ROW_5_WATER))
+	create_lilly_pad($Floatables_Lillypad_05, Vector2(DIMENSIONS.x - (TILE_SIZE * 3), ROW_5_WATER))
 	
 	lillypads.append($Floatables_Lillypad_01)
 	lillypads.append($Floatables_Lillypad_02)
@@ -93,15 +93,33 @@ func _ready():
 #	var new_log_croc = instantiate_and_set_owner_and_parent(floatable_scene, self)
 #	create_log_croc($Floatables_Log_Croc_08, Vector2(TILE_SIZE * 7, ROW_5_WATER), false)
 
-	var new_vehicle = instantiate_and_set_owner_and_parent(vehicle_scene, self)
-	create_vehicle(new_vehicle, Vector2(TILE_SIZE * 3, ROW_1_STREET), false)
+	create_vehicle(Vector2(TILE_SIZE * 3, ROW_1_STREET), false, 1.5)
+#	create_vehicle(Vector2(TILE_SIZE * 8, ROW_1_STREET), false, 1.5)
+	create_vehicle(Vector2(TILE_SIZE * 14, ROW_1_STREET), false, 1.5)
+#	create_vehicle(Vector2(TILE_SIZE * 3, ROW_2_STREET), false, 1.8)
+	create_vehicle(Vector2(TILE_SIZE * 8, ROW_2_STREET), false, 1.8)
+#	create_vehicle(Vector2(TILE_SIZE * 14, ROW_2_STREET), false, 1.8)
+	create_vehicle(Vector2(TILE_SIZE * 19, ROW_2_STREET), false, 1.8)
+#	create_vehicle(Vector2(TILE_SIZE * 24, ROW_2_STREET), false, 1.8)
+	create_vehicle(Vector2(TILE_SIZE * 3, ROW_3_STREET), true, 1.6)
+#	create_vehicle(Vector2(TILE_SIZE * 8, ROW_3_STREET), true, 1.6)
+	create_vehicle(Vector2(TILE_SIZE * 14, ROW_3_STREET), true, 1.6)
+#	create_vehicle(Vector2(TILE_SIZE * 3, ROW_4_STREET), true, 1.8)
+	create_vehicle(Vector2(TILE_SIZE * 8, ROW_4_STREET), true, 1.8)
+#	create_vehicle(Vector2(TILE_SIZE * 14, ROW_4_STREET), true, 1.8)
+	create_vehicle(Vector2(TILE_SIZE * 19, ROW_4_STREET), true, 1.8)
+#	create_vehicle(Vector2(TILE_SIZE * 24, ROW_4_STREET), true, 1.8)
+	create_vehicle(Vector2(TILE_SIZE * 14, ROW_5_STREET), true, 2.1)
+#	create_vehicle(Vector2(TILE_SIZE * 19, ROW_5_STREET), true, 2.1)
+	create_vehicle(Vector2(TILE_SIZE * 24, ROW_5_STREET), true, 2.1)
 	
 	for entry in dict_interchangeable.keys():
 		if \"Floatables\" in entry.name:
-			print(entry)
 			entry.timer.connect(_on_floatables_interchangeable_timer)
 			entry.flotable_entered.connect(_on_floatables_interchangeable_body_entered)
 			entry.flotable_exited.connect(_on_floatables_interchangeable_body_exited)
+#		else: # Vehicles
+#			entry.timer.connect()
 	
 	for lillypad in lillypads:
 		lillypad.flotable_entered.connect(_on_floatables_lillypad_body_entered)
@@ -242,19 +260,24 @@ func create_log_croc_animations(object):
 		object.sprite_frames.add_frame(\"chomp\", texture_chomp_00, 1.0)
 		object.sprite_frames.add_frame(\"chomp\", texture_chomp_01, 1.0)
 
-func create_vehicle(object, position, flipped):
-	object.flip_h = flipped
-	var collision_shape = object.get_node(\"Area2D/CollisionShape2D\")
+func create_vehicle(position, flipped, speed_multiplier):
+	var new_vehicle = instantiate_and_set_owner_and_parent(vehicle_scene, self)
+	var collision_shape = new_vehicle.get_node(\"Area2D/CollisionShape2D\")
 	var shape = RectangleShape2D.new()
-#	shape.set_size(Vector2(64, 32))
-	shape.set_size(Vector2(48, 32))
+	var texture_selector = randi_range(1, 7)
+	var is_bus = false
+	var front_wheel = new_vehicle.get_node(\"front_wheel\")
+	var back_wheel = new_vehicle.get_node(\"back_wheel\")
+	
+	if texture_selector == 1:
+		is_bus = true
+		shape.set_size(Vector2(58, 32))
+	else:
+		shape.set_size(Vector2(48, 32))
 	
 	collision_shape.shape = shape
-	collision_shape.position.x -= 8
 	
-	object.position = position
-	
-	var texture_selector = randi_range(1, 7)
+	new_vehicle.position = position
 	
 	var image
 	var texture
@@ -276,14 +299,32 @@ func create_vehicle(object, position, flipped):
 			image = Image.load_from_file(\"res://art/vehicles/taxi.png\")
 	texture = ImageTexture.create_from_image(image)
 	
-	object.texture = texture
+	new_vehicle.texture = texture
 	
-	dict_interchangeable[object] = false
+	dict_interchangeable[new_vehicle] = false
 	
 	if flipped:
-		dict_movement_direction[object] = -1.0
+		dict_movement_direction[new_vehicle] = -1.0 * speed_multiplier
+		collision_shape.position.x += 8
+		front_wheel.position.x -= 8
+		back_wheel.position.x -= -20
+		if is_bus:
+			collision_shape.position.x -= 6
+			front_wheel.position.x += 2
+			back_wheel.position.x += 1
+		new_vehicle.get_node(\"Area2D\").set_direction(-1.0)
 	else:
-		dict_movement_direction[object] = 1.0
+		dict_movement_direction[new_vehicle] = 1.0 * speed_multiplier
+		collision_shape.position.x -= 8
+		front_wheel.position.x += 8
+		back_wheel.position.x += -20
+		if is_bus:
+			collision_shape.position.x += 6
+			front_wheel.position.x -= 2
+			back_wheel.position.x -= 1
+		new_vehicle.get_node(\"Area2D\").set_direction(1.0)
+	
+	new_vehicle.flip_h = flipped
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta):
@@ -406,7 +447,7 @@ texture_region_size = Vector2i(32, 32)
 4:0/0 = 0
 4:0/0/physics_layer_0/linear_velocity = Vector2(0, 0)
 4:0/0/physics_layer_0/angular_velocity = 0.0
-4:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-16, -16, 16, -16, 16, 16, -16, 16)
+4:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-14, -14, 14, -14, 14, 14, -14, 14)
 4:0/0/physics_layer_1/linear_velocity = Vector2(0, 0)
 4:0/0/physics_layer_1/angular_velocity = 0.0
 0:1/0 = 0
@@ -432,7 +473,7 @@ texture_region_size = Vector2i(32, 32)
 4:1/0 = 0
 4:1/0/physics_layer_0/linear_velocity = Vector2(0, 0)
 4:1/0/physics_layer_0/angular_velocity = 0.0
-4:1/0/physics_layer_0/polygon_0/points = PackedVector2Array(-16, -16, 16, -16, 16, 16, -16, 16)
+4:1/0/physics_layer_0/polygon_0/points = PackedVector2Array(-14, -14, 14, -14, 14, 14, -14, 14)
 4:1/0/physics_layer_1/linear_velocity = Vector2(0, 0)
 4:1/0/physics_layer_1/angular_velocity = 0.0
 0:2/0 = 0
@@ -479,13 +520,13 @@ texture_region_size = Vector2i(32, 32)
 3:4/0 = 0
 3:4/0/physics_layer_0/linear_velocity = Vector2(0, 0)
 3:4/0/physics_layer_0/angular_velocity = 0.0
-3:4/0/physics_layer_0/polygon_0/points = PackedVector2Array(-16, -16, 16, -16, 16, 16, -16, 16)
+3:4/0/physics_layer_0/polygon_0/points = PackedVector2Array(-10, 2, 4, 0, 4, 12, -10, 12)
 3:4/0/physics_layer_1/linear_velocity = Vector2(0, 0)
 3:4/0/physics_layer_1/angular_velocity = 0.0
 4:2/0 = 0
 4:2/0/physics_layer_0/linear_velocity = Vector2(0, 0)
 4:2/0/physics_layer_0/angular_velocity = 0.0
-4:2/0/physics_layer_0/polygon_0/points = PackedVector2Array(-16, -16, 16, -16, 16, 16, -16, 16)
+4:2/0/physics_layer_0/polygon_0/points = PackedVector2Array(-14, -14, 14, -14, 14, 14, -14, 14)
 4:2/0/physics_layer_1/linear_velocity = Vector2(0, 0)
 4:2/0/physics_layer_1/angular_velocity = 0.0
 3:2/0 = 0
@@ -557,7 +598,7 @@ layer_4/modulate = Color(1, 1, 1, 1)
 layer_4/y_sort_enabled = false
 layer_4/y_sort_origin = 0
 layer_4/z_index = 4
-layer_4/tile_data = PackedInt32Array(917529, 196608, 4, 917505, 196608, 4, 524290, 196608, 4, 524311, 196608, 4, 720899, 262144, 0, 720898, 262144, 0, 720897, 262144, 0, 720900, 262144, 0, 720901, 262144, 0, 720902, 262144, 2, 720896, 262144, 0, 720905, 262144, 1, 720906, 262144, 0, 720907, 262144, 0, 720908, 262144, 0, 720909, 262144, 0, 720910, 262144, 0, 720911, 262144, 0, 720912, 262144, 0, 720913, 262144, 0, 720914, 262144, 2, 720917, 262144, 1, 720918, 262144, 0, 720919, 262144, 0, 720920, 262144, 0, 720921, 262144, 0, 720922, 262144, 0, 524292, 262144, 0, 524293, 262144, 0, 524294, 262144, 0, 524295, 262144, 0, 524296, 262144, 0, 524297, 262144, 2, 524301, 262144, 1, 524302, 262144, 0, 524303, 262144, 0, 524304, 262144, 0, 524305, 262144, 0, 524306, 262144, 0, 524307, 262144, 0, 524308, 262144, 0, 524309, 262144, 0, 524310, 262144, 2, 524291, 262144, 1, 917511, 196608, 4, 917512, 196608, 4, 917524, 196608, 4, 917519, 196608, 4)
+layer_4/tile_data = PackedInt32Array(917529, 196608, 4, 917505, 196608, 4, 524290, 196608, 4, 524311, 196608, 4, 720899, 262144, 0, 720898, 262144, 0, 720897, 262144, 0, 720900, 262144, 0, 720901, 262144, 0, 720902, 262144, 2, 720896, 262144, 0, 720905, 262144, 1, 720906, 262144, 0, 720907, 262144, 0, 720908, 262144, 0, 720909, 262144, 0, 720910, 262144, 0, 720911, 262144, 0, 720912, 262144, 0, 720913, 262144, 0, 720914, 262144, 2, 720917, 262144, 1, 720918, 262144, 0, 720919, 262144, 0, 720920, 262144, 0, 720921, 262144, 0, 720922, 262144, 0, 524292, 262144, 0, 524293, 262144, 0, 524294, 262144, 0, 524295, 262144, 0, 524296, 262144, 0, 524297, 262144, 2, 524301, 262144, 1, 524302, 262144, 0, 524303, 262144, 0, 524304, 262144, 0, 524305, 262144, 0, 524306, 262144, 0, 524307, 262144, 0, 524308, 262144, 0, 524309, 262144, 0, 524310, 262144, 2, 524291, 262144, 1, 917511, 196608, 4, 917512, 196608, 4, 917524, 196608, 4, 917519, 196608, 4, 524300, 65536, 4, 524313, 65536, 3, 524298, 65536, 3)
 
 [node name="Frog" parent="." instance=ExtResource("1_oip3v")]
 z_index = 999
