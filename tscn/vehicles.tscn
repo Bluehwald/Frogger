@@ -19,7 +19,7 @@ func _process(delta):
 
 func _on_body_entered(body):
 	if (body.name == \"Frog\"):
-		body.death()
+		body.death(body.deathReason.RUNOVER)
 
 func set_direction(dir):
 	direction = dir

@@ -34,7 +34,7 @@ func _on_timer_timeout():
 
 func _on_area_2d_death_zone_body_entered(body):
 	if (body.name == \"Frog\"):
-		body.death()
+		body.death(body.deathReason.EATEN)
 "
 
 [node name="Floatables" type="AnimatedSprite2D"]

@@ -1,9 +1,12 @@
-[gd_scene load_steps=9 format=3 uid="uid://1edh2rs6gc4v"]
+[gd_scene load_steps=12 format=3 uid="uid://1edh2rs6gc4v"]
 
 [ext_resource type="PackedScene" uid="uid://j32perqlaaws" path="res://tscn/frog.tscn" id="1_oip3v"]
 [ext_resource type="Texture2D" uid="uid://cp5jilmte88xo" path="res://art/tileset/tileset.png" id="2_xnago"]
 [ext_resource type="PackedScene" uid="uid://c1gfcihyes3mo" path="res://tscn/vehicles.tscn" id="3_fphiq"]
 [ext_resource type="PackedScene" uid="uid://d207u0lh0i81m" path="res://tscn/floatables.tscn" id="3_q2diy"]
+[ext_resource type="AudioStream" uid="uid://cejghr1opxi48" path="res://art/sounds/Frogger.wav" id="5_qy8yu"]
+[ext_resource type="AudioStream" uid="uid://bg4i8jepn0of4" path="res://art/sounds/score.wav" id="6_w2ynu"]
+[ext_resource type="Texture2D" uid="uid://ch58p3kna3n8q" path="res://art/frog/up_idle.png" id="7_qmh7n"]
 
 [sub_resource type="GDScript" id="GDScript_sxywy"]
 script/source = "extends Node2D
@@ -35,6 +38,9 @@ var dict_taken_lillypads : Dictionary
 var lillypads : Array
 
 var current_frog
+
+var score = 600
+var lives = 5
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
@@ -363,6 +369,11 @@ func _physics_process(delta):
 	if on_floatables.is_empty():
 		current_frog.set_on_floatable(false)
 		current_frog.set_floatable_velocity(Vector2.ZERO)
+	
+	if dict_taken_lillypads[$Floatables_Lillypad_01] && dict_taken_lillypads[$Floatables_Lillypad_02] && dict_taken_lillypads[$Floatables_Lillypad_03] && dict_taken_lillypads[$Floatables_Lillypad_04] && dict_taken_lillypads[$Floatables_Lillypad_05]:
+		$LabelGameOver.text = \"You won!\"
+		$LabelGameOver.show()
+		$TimerScoreDecrease.stop()
 
 func floatable_off_screen_resetter(object):
 	if object.position.x > DIMENSIONS.x + TILE_SIZE:
@@ -399,6 +410,9 @@ func _on_floatables_interchangeable_timer(object):
 
 func _on_floatables_lillypad_body_entered(object):
 	if (!dict_taken_lillypads[object]):
+		$AudioStreamPlayerScore.stop()
+		$AudioStreamPlayerScore.play()
+		score += 1000
 		dict_taken_lillypads[object] = true
 		var image_frog = Image.load_from_file(\"res://art/frog/up_idle.png\")
 		var texture_frog = ImageTexture.create_from_image(image_frog)
@@ -416,6 +430,29 @@ func _on_floatables_lillypad_body_entered(object):
 		shape.set_size(Vector2(32, 32))
 		
 		collison_shape.shape = shape
+
+func _on_timer_score_decrease_timeout():
+	score -= 1
+	$LabelScore.text = str(score)
+	$TimerScoreDecrease.stop()
+	$TimerScoreDecrease.start()
+
+func lose_a_life():
+	match lives:
+		0:
+			$LabelGameOver.show()
+		1:
+			$TextureRectLife1.hide()
+		2:
+			$TextureRectLife2.hide()
+		3:
+			$TextureRectLife3.hide()
+		4:
+			$TextureRectLife4.hide()
+		5:
+			$TextureRectLife5.hide()
+	lives -= 1
+	score -= 50
 "
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_4sdko"]
@@ -655,5 +692,108 @@ up_direction = Vector2(0.999997, -0.00243308)
 
 [node name="Floatables_Log_Croc_08" parent="." instance=ExtResource("3_q2diy")]
 
+[node name="AudioStreamPlayerMusic" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("5_qy8yu")
+autoplay = true
+
+[node name="AudioStreamPlayerScore" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("6_w2ynu")
+
+[node name="TimerScoreDecrease" type="Timer" parent="."]
+autostart = true
+
+[node name="Panel" type="Panel" parent="."]
+z_index = 999
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_top = 1.0
+offset_right = 865.0
+offset_bottom = 97.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Label" type="Label" parent="."]
+z_index = 999
+offset_left = 9.0
+offset_top = 6.0
+offset_right = 61.0
+offset_bottom = 32.0
+text = "Score: "
+
+[node name="Label2" type="Label" parent="."]
+z_index = 999
+offset_left = 9.0
+offset_top = 67.0
+offset_right = 61.0
+offset_bottom = 93.0
+text = "Lives:"
+
+[node name="TextureRectLife1" type="TextureRect" parent="."]
+z_index = 999
+offset_left = 61.0
+offset_top = 63.0
+offset_right = 93.0
+offset_bottom = 95.0
+texture = ExtResource("7_qmh7n")
+
+[node name="TextureRectLife2" type="TextureRect" parent="."]
+z_index = 999
+offset_left = 90.0
+offset_top = 63.0
+offset_right = 122.0
+offset_bottom = 95.0
+texture = ExtResource("7_qmh7n")
+
+[node name="TextureRectLife3" type="TextureRect" parent="."]
+z_index = 999
+offset_left = 122.0
+offset_top = 63.0
+offset_right = 154.0
+offset_bottom = 95.0
+texture = ExtResource("7_qmh7n")
+
+[node name="TextureRectLife4" type="TextureRect" parent="."]
+z_index = 999
+offset_left = 154.0
+offset_top = 63.0
+offset_right = 186.0
+offset_bottom = 95.0
+texture = ExtResource("7_qmh7n")
+
+[node name="TextureRectLife5" type="TextureRect" parent="."]
+z_index = 999
+offset_left = 186.0
+offset_top = 63.0
+offset_right = 218.0
+offset_bottom = 95.0
+texture = ExtResource("7_qmh7n")
+
+[node name="LabelScore" type="Label" parent="."]
+z_index = 999
+offset_left = 61.0
+offset_top = 6.0
+offset_right = 90.0
+offset_bottom = 32.0
+text = "600"
+horizontal_alignment = 2
+
+[node name="LabelGameOver" type="Label" parent="."]
+visible = false
+z_index = 999
+offset_top = -1.0
+offset_right = 854.0
+offset_bottom = 479.0
+theme_override_colors/font_color = Color(1, 0, 0, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
+theme_override_constants/shadow_offset_x = 3
+theme_override_font_sizes/font_size = 78
+text = "GAME OVER"
+horizontal_alignment = 1
+vertical_alignment = 1
+
 [connection signal="body_entered" from="Area2D_water" to="Frog" method="_on_area_2d_water_body_entered"]
 [connection signal="body_exited" from="Area2D_water" to="Frog" method="_on_area_2d_water_body_exited"]
+[connection signal="timeout" from="TimerScoreDecrease" to="." method="_on_timer_score_decrease_timeout"]

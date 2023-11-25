@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3 uid="uid://j32perqlaaws"]
+[gd_scene load_steps=16 format=3 uid="uid://j32perqlaaws"]
 
 [ext_resource type="Texture2D" uid="uid://betlutrc7j35" path="res://art/frog/down_idle.png" id="1_x8n60"]
 [ext_resource type="Texture2D" uid="uid://t7itu4cl8xb7" path="res://art/frog/down_jump.png" id="2_twgww"]
@@ -8,6 +8,8 @@
 [ext_resource type="Texture2D" uid="uid://bjurlqkl0hspl" path="res://art/frog/right_jump.png" id="6_s68nk"]
 [ext_resource type="Texture2D" uid="uid://ch58p3kna3n8q" path="res://art/frog/up_idle.png" id="7_mx67y"]
 [ext_resource type="Texture2D" uid="uid://cajeajmoq5qu8" path="res://art/frog/up_jump.png" id="8_sn8f7"]
+[ext_resource type="AudioStream" uid="uid://biuodgktgd8wl" path="res://art/sounds/Ribbit.ogg" id="9_vge6c"]
+[ext_resource type="AudioStream" uid="uid://dt354vf7nyjrk" path="res://art/sounds/death.wav" id="10_a6486"]
 
 [sub_resource type="GDScript" id="GDScript_10l7q"]
 script/source = "class_name Frog
@@ -26,6 +28,18 @@ var sprites : AnimatedSprite2D
 var on_floating_thing : bool
 var on_water : bool
 var is_on_lillypad : bool
+var is_about_to_die : bool
+
+enum deathReason {WATER, EATEN, RUNOVER}
+#@export var DEATHREASON : deathReason
+
+var deaths = 0
+
+var swipe_start = null
+var minimum_drag = 100
+
+var current_input_mobile = null
+enum movementMobile {UP, DOWN, LEFT, RIGHT}
 
 func _ready():
 	position = STARTING_POSITION
@@ -35,6 +49,35 @@ func _ready():
 	on_floating_thing = false
 	on_water = false
 	is_on_lillypad = false
+	is_about_to_die = false
+	$Timer.stop()
+	$TimerImmunity.stop()
+
+func _unhandled_input(event):
+	if event.is_action_pressed(\"click\"):
+		swipe_start = event.position
+	if event.is_action_released(\"click\"):
+		_calculate_swipe(event.position)
+
+func _calculate_swipe(swipe_end):
+	if swipe_start == null: 
+		return
+	var swipe = swipe_end - swipe_start
+#	print(swipe)
+	if abs(swipe.x) > minimum_drag:
+		if swipe.x > 0:
+#			print(\"swipe right\")
+			current_input_mobile = movementMobile.RIGHT
+		else:
+#			print(\"swipe left\")
+			current_input_mobile = movementMobile.LEFT
+	if abs(swipe.y) > minimum_drag:
+		if swipe.y > 0:
+#			print(\"swip down\")
+			current_input_mobile = movementMobile.DOWN
+		else:
+#			print(\"swip up\")
+			current_input_mobile = movementMobile.UP
 
 func _physics_process(delta):
 	
@@ -43,21 +86,33 @@ func _physics_process(delta):
 		# only one movement at a time!
 		if !sprites.is_playing():
 			previous_position = position
-			if Input.is_action_just_pressed(\"left\"):
+			if Input.is_action_just_pressed(\"left\") || current_input_mobile == movementMobile.LEFT:
 				target_position.x -= 32
 				sprites.play(\"left_jump\")
-			if Input.is_action_just_pressed(\"right\"):
+				$AudioStreamPlayerJump.stop()
+				$AudioStreamPlayerJump.play()
+				current_input_mobile = null
+			if Input.is_action_just_pressed(\"right\") || current_input_mobile == movementMobile.RIGHT:
 				target_position.x += 32
 				sprites.play(\"right_jump\")
-			if Input.is_action_just_pressed(\"up\"):
+				$AudioStreamPlayerJump.stop()
+				$AudioStreamPlayerJump.play()
+				current_input_mobile = null
+			if Input.is_action_just_pressed(\"up\") || current_input_mobile == movementMobile.UP:
 				target_position.y -= 32
 				sprites.play(\"up_jump\")
-			if Input.is_action_just_pressed(\"down\"):
+				$AudioStreamPlayerJump.stop()
+				$AudioStreamPlayerJump.play()
+				current_input_mobile = null
+			if Input.is_action_just_pressed(\"down\") || current_input_mobile == movementMobile.DOWN:
 				target_position.y += 32
 				sprites.play(\"down_jump\")
+				$AudioStreamPlayerJump.stop()
+				$AudioStreamPlayerJump.play()
+				current_input_mobile = null
 		
 	if (target_position.x < 0.0 || target_position.y < 0.0 || target_position.x > 854 || target_position.y > 480):
-		death()
+		death(deathReason.EATEN)
 	
 #	print(floatable_velocity)
 	velocity = (round(target_position - position).normalized() * SPEED + floatable_velocity) * delta
@@ -84,12 +139,29 @@ func _physics_process(delta):
 			set_sprite_to_sitting_animation()
 	
 	if (on_water && !on_floating_thing):
-		death()
+		death(deathReason.WATER)
 	
-	move_and_slide()
+	if $Timer.time_left == 0.0 && is_about_to_die:
+		reset()
+	
+	if !is_about_to_die:
+		move_and_slide()
+	else:
+		$AnimatedSprite2D.hide()
 
-func death():
-	reset()
+func death(death_reason):
+	if !is_about_to_die && $TimerImmunity.time_left == 0.0:
+		self.get_parent().lose_a_life()
+		$AudioStreamPlayerDeath.stop()
+		$AudioStreamPlayerDeath.play()
+		deaths = deaths + 1
+#		print(\"deaths: \" + str(deaths))
+		if (death_reason == deathReason.WATER):
+			$GPUParticles2D.restart()
+		else:
+			$GPUParticles2D_Blood.restart()
+		$Timer.start()
+		is_about_to_die = true
 
 func reset():
 	position = STARTING_POSITION
@@ -98,6 +170,9 @@ func reset():
 	sprites.play(\"up_jump\")
 	set_sprite_to_sitting_animation()
 	floatable_velocity = Vector2.ZERO
+	is_about_to_die = false
+	$AnimatedSprite2D.show()
+	$TimerImmunity.start()
 
 func set_on_lillypad(value, new_position):
 	is_on_lillypad = value
@@ -205,6 +280,37 @@ animations = [{
 "speed": 5.0
 }]
 
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_j7xph"]
+emission_shape = 6
+emission_ring_axis = Vector3(0, 0, 1)
+emission_ring_height = 16.0
+emission_ring_radius = 16.0
+emission_ring_inner_radius = 10.0
+particle_flag_disable_z = true
+spread = 180.0
+gravity = Vector3(0, 0, 0)
+initial_velocity_min = 1.0
+initial_velocity_max = 25.0
+orbit_velocity_min = 0.0
+orbit_velocity_max = 0.0
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_ttd12"]
+lifetime_randomness = 0.52
+emission_shape = 6
+emission_ring_axis = Vector3(0, 0, 1)
+emission_ring_height = 32.0
+emission_ring_radius = 16.0
+emission_ring_inner_radius = 15.0
+particle_flag_disable_z = true
+direction = Vector3(1, 1, 1)
+spread = 180.0
+gravity = Vector3(0, 0, 0)
+initial_velocity_min = 1.0
+initial_velocity_max = 25.0
+orbit_velocity_min = 0.0
+orbit_velocity_max = 0.0
+color = Color(0.694118, 0.243137, 0.32549, 1)
+
 [node name="Frog" type="CharacterBody2D"]
 script = SubResource("GDScript_10l7q")
 
@@ -215,3 +321,30 @@ shape = SubResource("RectangleShape2D_wbsch")
 texture_filter = 1
 sprite_frames = SubResource("SpriteFrames_n5g8e")
 animation = &"up_jump"
+
+[node name="GPUParticles2D" type="GPUParticles2D" parent="."]
+emitting = false
+amount = 38
+process_material = SubResource("ParticleProcessMaterial_j7xph")
+lifetime = 0.5
+one_shot = true
+
+[node name="GPUParticles2D_Blood" type="GPUParticles2D" parent="."]
+emitting = false
+amount = 38
+process_material = SubResource("ParticleProcessMaterial_ttd12")
+lifetime = 0.5
+one_shot = true
+
+[node name="Timer" type="Timer" parent="."]
+one_shot = true
+
+[node name="TimerImmunity" type="Timer" parent="."]
+wait_time = 0.5
+one_shot = true
+
+[node name="AudioStreamPlayerJump" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("9_vge6c")
+
+[node name="AudioStreamPlayerDeath" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("10_a6486")
