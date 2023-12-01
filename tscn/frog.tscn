@@ -41,6 +41,8 @@ var minimum_drag = 100
 var current_input_mobile = null
 enum movementMobile {UP, DOWN, LEFT, RIGHT}
 
+var game_started = false
+
 func _ready():
 	position = STARTING_POSITION
 	sprites = $AnimatedSprite2D
@@ -84,7 +86,7 @@ func _physics_process(delta):
 #	print(self, \" \", sprites.is_playing(), \" \", is_on_lillypad)
 	if !is_on_lillypad:
 		# only one movement at a time!
-		if !sprites.is_playing():
+		if !sprites.is_playing() and game_started:
 			previous_position = position
 			if Input.is_action_just_pressed(\"left\") || current_input_mobile == movementMobile.LEFT:
 				target_position.x -= 32

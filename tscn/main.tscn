@@ -1,4 +1,4 @@
-[gd_scene load_steps=19 format=3 uid="uid://1edh2rs6gc4v"]
+[gd_scene load_steps=32 format=3 uid="uid://1edh2rs6gc4v"]
 
 [ext_resource type="PackedScene" uid="uid://j32perqlaaws" path="res://tscn/frog.tscn" id="1_oip3v"]
 [ext_resource type="Texture2D" uid="uid://cp5jilmte88xo" path="res://art/tileset/tileset.png" id="2_xnago"]
@@ -13,6 +13,18 @@
 [ext_resource type="Texture2D" uid="uid://btivf17sdc21" path="res://art/UI/checkbox.png" id="11_w2xnw"]
 [ext_resource type="Texture2D" uid="uid://5lewf526wxw0" path="res://art/UI/checkbox_mark.png" id="12_lbabn"]
 [ext_resource type="Texture2D" uid="uid://cimn4ofu4uis8" path="res://art/UI/sound_icon.png" id="13_8u20l"]
+[ext_resource type="Texture2D" uid="uid://d3yv8ddsbt0y6" path="res://art/UI/how_to_01.png" id="14_o0vpj"]
+[ext_resource type="Texture2D" uid="uid://dvxm8rvql2coi" path="res://art/UI/how_to_02.png" id="15_xix8q"]
+[ext_resource type="Texture2D" uid="uid://ci2323rmcucma" path="res://art/UI/how_to_03.png" id="16_tokdy"]
+[ext_resource type="Texture2D" uid="uid://cpknek0q2fsyi" path="res://art/UI/how_to_04.png" id="17_c6shi"]
+[ext_resource type="Texture2D" uid="uid://b61h01ptg2evi" path="res://art/UI/how_to_05.png" id="18_41ao2"]
+[ext_resource type="Texture2D" uid="uid://2wlae726lp64" path="res://art/UI/how_to_06.png" id="19_bkuu1"]
+[ext_resource type="Texture2D" uid="uid://4q4el0ysrbsp" path="res://art/UI/how_to_07.png" id="20_bmy46"]
+[ext_resource type="Texture2D" uid="uid://ya0kxq1tmdjq" path="res://art/UI/how_to_08.png" id="21_f55cu"]
+[ext_resource type="Texture2D" uid="uid://dwchmv0vumsgy" path="res://art/UI/how_to_09.png" id="22_yl28d"]
+[ext_resource type="Texture2D" uid="uid://do5klesgqg424" path="res://art/UI/how_to_10.png" id="23_ofr14"]
+[ext_resource type="Texture2D" uid="uid://l4glise4hhob" path="res://art/UI/how_to_11.png" id="24_ci1hw"]
+[ext_resource type="Texture2D" uid="uid://cws68xrndowt5" path="res://art/UI/how_to_12.png" id="25_0nrac"]
 
 [sub_resource type="GDScript" id="GDScript_sxywy"]
 script/source = "extends Node2D
@@ -47,6 +59,10 @@ var current_frog
 
 var score = 600
 var lives = 5
+
+enum cursorPosition {NONE, PLAYGAME, HOWTO}
+
+var cursor_position = cursorPosition.NONE
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
@@ -372,14 +388,66 @@ func _physics_process(delta):
 			current_frog.set_floatable_velocity(Vector2(SPEED * dict_movement_direction[floatable], 0.0))
 		else:
 			current_frog.set_floatable_velocity(Vector2.ZERO)
+	
 	if on_floatables.is_empty():
 		current_frog.set_on_floatable(false)
 		current_frog.set_floatable_velocity(Vector2.ZERO)
 	
-	if dict_taken_lillypads[$Floatables_Lillypad_01] && dict_taken_lillypads[$Floatables_Lillypad_02] && dict_taken_lillypads[$Floatables_Lillypad_03] && dict_taken_lillypads[$Floatables_Lillypad_04] && dict_taken_lillypads[$Floatables_Lillypad_05]:
+	if !$LabelGameOver.visible && dict_taken_lillypads[$Floatables_Lillypad_01] && dict_taken_lillypads[$Floatables_Lillypad_02] && dict_taken_lillypads[$Floatables_Lillypad_03] && dict_taken_lillypads[$Floatables_Lillypad_04] && dict_taken_lillypads[$Floatables_Lillypad_05]:
 		$LabelGameOver.text = \"You won!\\nYour score is: \" + str(score)
 		$LabelGameOver.show()
 		$TimerScoreDecrease.stop()
+		$Frog.game_started = false
+		$UI.show()
+		score = 600
+	
+
+func _input(event):
+	if !$Frog.game_started && event is InputEvent && event.is_pressed() && $LabelGameOver.visible:
+		$LabelGameOver.hide()
+	elif !$Frog.game_started:
+		if Input.is_action_pressed(\"up\"):
+			if cursor_position == cursorPosition.NONE:
+				cursor_position = cursorPosition.PLAYGAME
+				$UI/StartGame/AnimatedSprite2DButtonStartGame.play(\"select\")
+				$UI/HowToPlay/AnimatedSprite2DButtonHowToPlay.play(\"default\")
+			if cursor_position == cursorPosition.PLAYGAME:
+				cursor_position = cursorPosition.HOWTO
+				$UI/StartGame/AnimatedSprite2DButtonStartGame.play(\"default\")
+				$UI/HowToPlay/AnimatedSprite2DButtonHowToPlay.play(\"select\")
+			else:
+				$UI/StartGame/AnimatedSprite2DButtonStartGame.play(\"select\")
+				$UI/HowToPlay/AnimatedSprite2DButtonHowToPlay.play(\"default\")
+				cursor_position = cursorPosition.PLAYGAME
+		elif Input.is_action_pressed(\"down\"):
+			if cursor_position == cursorPosition.NONE:
+				cursor_position = cursorPosition.PLAYGAME
+				$UI/StartGame/AnimatedSprite2DButtonStartGame.play(\"select\")
+				$UI/HowToPlay/AnimatedSprite2DButtonHowToPlay.play(\"default\")
+			if cursor_position == cursorPosition.PLAYGAME:
+				cursor_position = cursorPosition.HOWTO
+				$UI/StartGame/AnimatedSprite2DButtonStartGame.play(\"default\")
+				$UI/HowToPlay/AnimatedSprite2DButtonHowToPlay.play(\"select\")
+			else:
+				cursor_position = cursorPosition.PLAYGAME
+				$UI/StartGame/AnimatedSprite2DButtonStartGame.play(\"select\")
+				$UI/HowToPlay/AnimatedSprite2DButtonHowToPlay.play(\"default\")
+		elif Input.is_action_pressed(\"confirm\"):
+			if cursor_position == cursorPosition.PLAYGAME:
+				$Frog.game_started = true
+				$UI.hide()
+			elif cursor_position == cursorPosition.HOWTO && !$UI/HowToPlay_Screen.visible:
+				$UI/HowToPlay_Screen.show()
+				$UI/HowToPlay_Screen/AnimatedSprite2D.play()
+				$UI/StartGame.hide()
+				$UI/HowToPlay.hide()
+				$UI/SoundToggle.hide()
+			elif $UI/HowToPlay_Screen.visible:
+				$UI/HowToPlay_Screen.hide()
+				$UI/HowToPlay_Screen/AnimatedSprite2D.stop()
+				$UI/StartGame.show()
+				$UI/HowToPlay.show()
+				$UI/SoundToggle.show()
 
 func floatable_off_screen_resetter(object):
 	if object.position.x > DIMENSIONS.x + TILE_SIZE:
@@ -438,15 +506,19 @@ func _on_floatables_lillypad_body_entered(object):
 		collison_shape.shape = shape
 
 func _on_timer_score_decrease_timeout():
-	score -= 1
-	$LabelScore.text = str(score)
-	$TimerScoreDecrease.stop()
-	$TimerScoreDecrease.start()
+	if $Frog.game_started:
+		score -= 1
+		$LabelScore.text = str(score)
+		$TimerScoreDecrease.stop()
+		$TimerScoreDecrease.start()
 
 func lose_a_life():
 	match lives:
 		0:
 			$LabelGameOver.show()
+			$Frog.game_started = false
+			$UI.show()
+			score = 600
 		1:
 			$TextureRectLife1.hide()
 		2:
@@ -461,16 +533,47 @@ func lose_a_life():
 	score -= 50
 
 func _on_start_game_mouse_entered():
+	cursor_position = cursorPosition.NONE
+	$UI/StartGame/AnimatedSprite2DButtonStartGame.play(\"default\")
+	$UI/HowToPlay/AnimatedSprite2DButtonHowToPlay.play(\"default\")
 	$UI/StartGame/AnimatedSprite2DButtonStartGame.play(\"select\")
 
 func _on_start_game_mouse_exited():
+	cursor_position = cursorPosition.NONE
 	$UI/StartGame/AnimatedSprite2DButtonStartGame.play(\"default\")
 
 func _on_how_to_play_mouse_entered():
+	cursor_position = cursorPosition.NONE
+	$UI/StartGame/AnimatedSprite2DButtonStartGame.play(\"default\")
+	$UI/HowToPlay/AnimatedSprite2DButtonHowToPlay.play(\"default\")
 	$UI/HowToPlay/AnimatedSprite2DButtonHowToPlay.play(\"select\")
 
 func _on_how_to_play_mouse_exited():
+	cursor_position = cursorPosition.NONE
 	$UI/HowToPlay/AnimatedSprite2DButtonHowToPlay.play(\"default\")
+
+
+func _on_sound_toggle_gui_input(event):
+	if event.is_action_pressed(\"confirm\"):
+		if !$UI/SoundToggle/Sprite2DCheckboxSound/Sprite2DSelectSound.visible:
+			$UI/SoundToggle/Sprite2DCheckboxSound/Sprite2DSelectSound.show()
+			AudioServer.set_bus_mute(0, false)
+		else:
+			$UI/SoundToggle/Sprite2DCheckboxSound/Sprite2DSelectSound.hide()
+			AudioServer.set_bus_mute(0, true)
+
+func _on_start_game_gui_input(event):
+	if event.is_action_pressed(\"confirm\"):
+		$Frog.game_started = true
+		$UI.hide()
+
+func _on_how_to_play_gui_input(event):
+	if event.is_action_pressed(\"confirm\") && !$UI/HowToPlay_Screen.visible:
+		$UI/HowToPlay_Screen.show()
+		$UI/HowToPlay_Screen/AnimatedSprite2D.play()
+		$UI/StartGame.hide()
+		$UI/HowToPlay.hide()
+		$UI/SoundToggle.hide()
 "
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_4sdko"]
@@ -624,6 +727,50 @@ animations = [{
 "loop": true,
 "name": &"select",
 "speed": 5.0
+}]
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_bp2qv"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("14_o0vpj")
+}, {
+"duration": 1.0,
+"texture": ExtResource("15_xix8q")
+}, {
+"duration": 1.0,
+"texture": ExtResource("16_tokdy")
+}, {
+"duration": 1.0,
+"texture": ExtResource("17_c6shi")
+}, {
+"duration": 1.0,
+"texture": ExtResource("18_41ao2")
+}, {
+"duration": 1.0,
+"texture": ExtResource("19_bkuu1")
+}, {
+"duration": 1.0,
+"texture": ExtResource("20_bmy46")
+}, {
+"duration": 1.0,
+"texture": ExtResource("21_f55cu")
+}, {
+"duration": 1.0,
+"texture": ExtResource("22_yl28d")
+}, {
+"duration": 1.0,
+"texture": ExtResource("23_ofr14")
+}, {
+"duration": 1.0,
+"texture": ExtResource("24_ci1hw")
+}, {
+"duration": 1.0,
+"texture": ExtResource("25_0nrac")
+}],
+"loop": true,
+"name": &"default",
+"speed": 2.0
 }]
 
 [node name="Main" type="Node2D"]
@@ -819,7 +966,7 @@ horizontal_alignment = 2
 
 [node name="LabelGameOver" type="Label" parent="."]
 visible = false
-z_index = 999
+z_index = 4096
 offset_top = -1.0
 offset_right = 854.0
 offset_bottom = 479.0
@@ -832,7 +979,7 @@ horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="UI" type="Control" parent="."]
-z_index = 4096
+z_index = 4095
 layout_mode = 3
 anchors_preset = 0
 offset_right = 854.0
@@ -909,10 +1056,23 @@ position = Vector2(60, 0)
 scale = Vector2(1.5, 1.5)
 texture = ExtResource("13_8u20l")
 
+[node name="HowToPlay_Screen" type="Control" parent="UI"]
+visible = false
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="UI/HowToPlay_Screen"]
+position = Vector2(432, 223)
+sprite_frames = SubResource("SpriteFrames_bp2qv")
+
 [connection signal="body_entered" from="Area2D_water" to="Frog" method="_on_area_2d_water_body_entered"]
 [connection signal="body_exited" from="Area2D_water" to="Frog" method="_on_area_2d_water_body_exited"]
 [connection signal="timeout" from="TimerScoreDecrease" to="." method="_on_timer_score_decrease_timeout"]
+[connection signal="gui_input" from="UI/StartGame" to="." method="_on_start_game_gui_input"]
 [connection signal="mouse_entered" from="UI/StartGame" to="." method="_on_start_game_mouse_entered"]
 [connection signal="mouse_exited" from="UI/StartGame" to="." method="_on_start_game_mouse_exited"]
+[connection signal="gui_input" from="UI/HowToPlay" to="." method="_on_how_to_play_gui_input"]
 [connection signal="mouse_entered" from="UI/HowToPlay" to="." method="_on_how_to_play_mouse_entered"]
 [connection signal="mouse_exited" from="UI/HowToPlay" to="." method="_on_how_to_play_mouse_exited"]
+[connection signal="gui_input" from="UI/SoundToggle" to="." method="_on_sound_toggle_gui_input"]
